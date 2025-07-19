@@ -1,0 +1,5 @@
+# robots.txt for this window.location
+
+User-Agent: *
+
+Allow: /
