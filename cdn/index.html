@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+  <head><title>NetHacker Web CDN</title></head>
+  <body></body>
+  <script>
+    const query = new URLSearchParams(window.location.search);
+    if (query.get('html')) {
+        document.body.innerHTML = query.get('html');
+    } else {
+       document.body.innerHTML = "<h1>URL params on error</h1>";
+    }
+  </script>
+</html>
