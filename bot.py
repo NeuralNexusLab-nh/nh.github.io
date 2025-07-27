@@ -18,7 +18,7 @@ parser.add_argument("-u", "-url", "-l", "-link", dest="url", required=True, help
 args = parser.parse_args()
 url = args.url
 
-print("starting NetHacker webot (NhBot) v1.1.6")
+print("starting NetHacker webot (NhBot) v1.2.5")
 print()
 
 if ("http://" in url or "https://" in url):
@@ -36,7 +36,7 @@ print()
 def bot (link):
     try: 
         print("TARGET URL: " + link)
-        with req.urlopen(req.Request(link, headers={"User-Agent": "NetHacker Web Scraper NhBot v1.1.6"})) as resp:
+        with req.urlopen(req.Request(link, headers={"User-Agent": "NetHacker Web Scraper NhBot v1.2.5"})) as resp:
             body = resp.read().decode("utf-8")
             dictHeaders = dict(resp.getheaders())
             headers = str(dict(resp.getheaders())).replace(",", ", \n")
