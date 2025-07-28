@@ -2,85 +2,82 @@ from urllib.parse import urlparse as parse
 import urllib.request as req
 import argparse
 import re
+import sys
 
-def xss(resBody):
-    xss = []
-    pattern = re.compile(r'(innerHTML|innerText|textContent)', re.IGNORECASE)
-    for m in pattern.finditer(resBody):
+def find_xss(body):
+    xss_list = []
+    pattern = re.compile(r'(innerHTML|innerText|textContent|eval)', re.IGNORECASE)
+    for m in pattern.finditer(body):
         start = max(m.start() - 20, 0)
         end = min(m.end() + 27, len(body))
         snippet = body[start:end]
-        xss.append(snippet)
-    return xss
+        xss_list.append(snippet)
+    return xss_list
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-u", "-url", "-l", "-link", dest="url", required=True, help="Target URL")
+parser.add_argument("-u", "-url", "-l", "-link", dest="url", help="Target URL")
 args = parser.parse_args()
-url = args.url
 
-print("starting NetHacker webot (NhBot) v1.2.5")
-print()
-
-if ("http://" in url or "https://" in url):
-    url = url
+if args.url:
+    url = args.url
 else:
+    url = input("URL: ")
+
+if not url.startswith("http://") and not url.startswith("https://"):
     url = "http://" + url
 
-src = []
+print("\nstarting NetHacker webot (NhBot) v1.2.5\n")
+
 domain = parse(url)
 domain = f"{domain.scheme}://{domain.netloc}"
-print()
-print("TARGET URL DOMAIN: " + domain)
-print()
+print("TARGET URL DOMAIN: " + domain + "\n")
 
-def bot (link):
+visited = set()
+src_links = []
+
+def bot(link):
+    if link in visited:
+        return
+    visited.add(link)
     try: 
         print("TARGET URL: " + link)
         with req.urlopen(req.Request(link, headers={"User-Agent": "NetHacker Web Scraper NhBot v1.2.5"})) as resp:
-            body = resp.read().decode("utf-8")
+            body = resp.read().decode("utf-8", errors="replace")
             dictHeaders = dict(resp.getheaders())
-            headers = str(dict(resp.getheaders())).replace(",", ", \n")
+            headers = str(dictHeaders).replace(",", ", \n")
             status = str(resp.status)
-        print()
-        print("RESPONSE:")
-        print("HTTP STATUS CODE: " + status)
-        print()
+
+        print("\nRESPONSE:")
+        print("HTTP STATUS CODE: " + status + "\n")
         print("RESPONSE HEADERS:")
-        print(headers)
+        print(headers + "\n")
+
+        print("Content-Security-Policy:", "True" if "Content-Security-Policy" in dictHeaders else "False")
+        print("X-Frame-Options:", "True" if any(k.lower() == "x-frame-options" for k in dictHeaders) else "False")
+        
+        print("\nRESPONSE BODY:")
+        print(body + "\n")
+
+        print("XSS-RELATED CODE SNIPPETS FOUND:")
+        print(find_xss(body))
         print()
-        if "Content-Security-Policy" in dictHeaders or "content-security-policy" in dictHeaders:
-            print("Content-Security-Policy: True")
-        else:
-            print("Content-Security-Policy: False")
-        if "X-Frame-Option" in dictHeaders or "x-frame-option" in dictHeaders or "X-Frame-Options" in dictHeaders or "x-frame-options" in dictHeaders:
-            print("X-Frame-Option: True")
-        else:
-            print("X-Frame-Option: False")
-        print()
-        print("RESPONSE BODY:")
-        print(body)
-        print()
-        print("xss location: ")
-        print(xss(body))
-        print()
-        html = body.split(" ")
-        index = [n for n, t in enumerate(html) if t == "src"]
-        for i in index:
-            src.append(html[i + 1])
+
+        matches = re.findall(r'src\s*=\s*[\'"]([^\'"]+)[\'"]', body)
+        for m in matches:
+            src_links.append(m)
     except Exception as err:
-        print("NhBot on ERROR: " + str(err))
-        print()
+        print("NhBot on ERROR:", str(err) + "\n")
 
 bot(url)
 
-if len(src) > 0:
-    for i in src:
-        if i[0] == "/":
-            urlPath = domain + i
-        elif "http://" in i or "https://" in i:
-            urlPath = i
-        else:
-            urlPath = domain + "/" + i
-        print("SOURCE URL IN RESPONSE BODY: " + urlPath)
-        print()
-        bot(urlPath)
+for i in src_links:
+    if i.startswith("http://") or i.startswith("https://"):
+        full_url = i
+    elif i.startswith("/"):
+        full_url = domain + i
+    else:
+        full_url = domain + "/" + i
+    print("SOURCE URL IN RESPONSE BODY:", full_url + "\n")
+    bot(full_url)
+
+input("PRESS ENTER TO EXIT")
